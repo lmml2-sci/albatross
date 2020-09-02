@@ -23,7 +23,8 @@ library(data.table)
 library(Imap)
 library(httr)
 
-summ_visualizations <- function (id){}
+# summ_visualizations <- function (id){}
+
 
 # set to fractional seconds
 op <- options(digits.secs=3)
@@ -31,8 +32,8 @@ op <- options(digits.secs=3)
 
 
 # the working directory is a folder where R reads and saves files.
-setwd('C:/Lucia/Datos/JOBS/Liverpool_Albatross_infrasounds_2020_2021/Analysis')
-
+# setwd('C:/Lucia/Datos/JOBS/Liverpool_Albatross_infrasounds_2020_2021/Analysis')
+# the working directory should be ideally where you are now
 
 # load in logger table
 sensor_table <- read.csv('Logger-Combined_data/Logger_deployment_tbl.csv', stringsAsFactors=F)
@@ -50,7 +51,7 @@ gps$timezlocal2<-with_tz(gps$timez, tz="Indian/Kerguelen")
 gps$time_sec<- seconds(gps$timez)# time in seconds period object. 
 
 
-acc <- read.csv('Logger-Combined_data/acc_clean.csv', stringsAsFactors=F)
+acc <- fread('Logger-Combined_data/acc_clean.csv', stringsAsFactors=F)
 acc$timez <- ymd_hms(acc$acc_dt)
 acc$timezlocal<-acc$timez+hours(5)
 acc$time_sec<- seconds(acc$timez)
@@ -67,7 +68,7 @@ acc$time_sec<- seconds(acc$timez)
 # infra$timezlocal<-infra$timez+hours(5)
 
 
-magnet <- read.csv('Logger-Combined_data/magnet_clean.csv', stringsAsFactors=F)
+magnet <- fread('Logger-Combined_data/magnet_clean.csv', stringsAsFactors=F)
 magnet$timez <- ymd_hms(magnet$magnet_dt)
 magnet$timezlocal<-magnet$timez+hours(5)
 magnet$time_sec<- seconds(magnet$timez)
@@ -105,11 +106,11 @@ params<-cbind(a,b,c)
 
 
 
-summ_visualizations <- function (id, duskam, dawnam){
+summ_visualizations <- function (id_val, duskam, dawnam){
   
-  gps_id1<-gps[gps[,"id"]==id,]
-  acc_id1<-acc[acc[,"id"]==id,]
-  mag_id1<-magnet[magnet[,"id"]==id,]
+  gps_id1 <- gps[gps[,"id"]==id_val,]
+  acc_id1 <- subset(acc, id == id_val)
+  mag_id1 <- subset(magnet, id == id_val)
   
   #sampling rate of each point 
   GPSres<-diff(gps_id1$time_sec@.Data)
@@ -174,10 +175,10 @@ results<-list(gps_id1=gps_id1, acc_id1=acc_id1, mag_id1=mag_id1, gps_id1_filt=gp
 
 ```
 
-# ID 
+# ID
 ```{r animal1, include=FALSE}
 x=1 # x equals the id
-results <- summ_visualizations(id=params[x,1],duskam=params[x,2], dawnam=params[x,3])
+results <- summ_visualizations(id_val=params[x,1],duskam=params[x,2], dawnam=params[x,3])
 ```
 
 ```{r animal, include=TRUE, echo=FALSE}
@@ -192,7 +193,8 @@ params[x,1]
 ###create an interactive figure of lat long using ggplotly with the colony point
   long<-c(results$gps_id1$longitude,51.706972)
   lat<-c(results$gps_id1$latitude,-46.358639)
-m0 <- highlight_key(results$gps_id1)
+  data <- results$gps_id1
+m0 <- highlight_key(data)
 p0 <- ggplot(m0, aes(longitude, latitude)) +
   geom_point(aes(color = factor(time_category)),size=0.5)+
   geom_text(x=51.706972, y=-46.358639, label='Colony')+
@@ -208,7 +210,7 @@ crosstalk::bscols(gg0, DT::datatable(m0))# DT::datatable(m0) creates a table wit
 
 ## local time vs. latitude  (day vs. night)
 ```{r cars01 , echo=FALSE , warning=F}
-pgps <- results$gps_id1 %>%
+pgps <- data %>%
   ggplot(aes(x =timezlocal, y = latitude)) +
   geom_point(aes(color = factor(time_category)),size=0.5)+
   theme_minimal()
@@ -218,8 +220,8 @@ ggplotly(pgps,
 
 ## longitude vs. local time  (day vs. night)
 ```{r cars02 , echo=FALSE , warning=F}
-# plot longitude vs. local time 
-pgps3 <- results$gps_id1 %>%
+# plot longitude vs. local time
+pgps3 <- data %>%
   ggplot(aes(x =longitude, y = timezlocal)) +
   geom_point(aes(color = factor(time_category)),size=0.5)+
   theme_minimal()
@@ -229,7 +231,7 @@ ggplotly(pgps3,
 
 ## local time vs. distance travelled in m  (day vs. night)
 ```{r cars03 , echo=FALSE , warning=F}
-pspeedsat <- results$gps_id1 %>%
+pspeedsat <- data %>%
   ggplot(aes(x =timezlocal, y = distances)) +
   geom_point(aes(color = factor(time_category)),size=0.5)+
   theme_minimal()
@@ -239,7 +241,7 @@ ggplotly(pspeedsat,
 
 ## local time vs. speed in meters per second (day vs. night)
 ```{r cars04 , echo=FALSE , warning=F}
-pspeed <- results$gps_id1 %>%
+pspeed <- data %>%
   ggplot(aes(x =timezlocal, y = speed)) +
   geom_point(aes(color = factor(time_category)),size=0.5)+
   theme_minimal()
@@ -249,7 +251,7 @@ ggplotly(pspeed,
 
 ## local time vs. speed in meters per second (n satellites)
 ```{r cars040 , echo=FALSE , warning=F}
-pspeed <- results$gps_id1 %>%
+pspeed <- data %>%
   ggplot(aes(x =timezlocal, y = speed)) +
   geom_point(aes(color = factor(numSat)),size=0.5)+
   theme_minimal()
@@ -257,10 +259,10 @@ ggplotly(pspeed,
          dynamicTicks = TRUE, session="knitr")
 ```
 
-## GPS sampling rate 
+## GPS sampling rate
 ```{r cars05 , echo=FALSE , warning=F}
-#plot the sampling rate of each point 
-GPSres<-diff(results$gps_id1$time_sec@.Data)
+#plot the sampling rate of each point
+GPSres<-diff(data$time_sec@.Data)
 ea=as.data.frame(GPSres)
 sum_df <- data.frame(t(unclass(summary(GPSres))))# create a summary of the sampling frequencies
 rownames(sum_df) <- NULL
@@ -280,7 +282,7 @@ only gps data with a sampling frequency >= 60 Hz, i.e, no more than one sample e
   long<-c(results$gps_id1_filt$longitude,51.706972)
   lat<-c(results$gps_id1_filt$latitude,-46.358639)
 m0 <- highlight_key(results$gps_id1_filt)
-p0 <- ggplot(m0, aes(longitude, latitude)) + 
+p0 <- ggplot(m0, aes(longitude, latitude)) +
   geom_point(aes(color = factor(time_category)),size=0.5)+
   geom_text(x=51.706972, y=-46.358639, label='Colony')+
   geom_point(x=51.706972, y=-46.358639, color="red")+
@@ -323,9 +325,9 @@ ggplotly(pspeed,
          dynamicTicks = TRUE, session="knitr")
 ```
 
-## GPS sampling rate 
+## GPS sampling rate
 ```{r cars05gps_id1_filt , echo=FALSE , warning=F}
-#plot the sampling rate of each point 
+#plot the sampling rate of each point
 GPSres<-diff(results$gps_id1$time_sec@.Data)
 ea=as.data.frame(GPSres)
 sum_df <- data.frame(t(unclass(summary(GPSres))))# create a summary of the sampling frequencies

@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
+./Logger-Combined_data/acc_clean.csv
+.albatross_lucia.Rproj
