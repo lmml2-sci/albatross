@@ -1,0 +1,219 @@
+---
+title: "Exploratoring environmental data"
+author: "RJ"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, encoding = "UTF_8")
+
+
+library(ggplot2)
+library(lubridate)
+library(sf)
+library(shiny)
+library(htmlwidgets)
+library(gapminder)
+library(plotly)
+library(dplyr)
+library(tidyr)
+library(maptools)
+library(data.table)
+library(Imap)
+library(httr)
+library(ncdf4) # to get what's needed from ncdf files
+
+# set to fractional seconds
+op <- options(digits.secs=3)
+
+# Colony
+# from Alex Corbeau who did fieldwork there. 46°21'31.1"S 51°42'25.1"E 
+colony <-c(51.706972, -46.358639)
+
+# let's do this around infrasound and barometric pressure
+path_to_env_files <- "./Databse Ollie/"
+ID_folders <- dir(path_to_env_files, pattern = "ID")
+
+# let's do this for the 1st bird
+x <- 7 # first ID
+path_to_trips <- paste0(path_to_env_files, ID_folders[x], "/")
+ID_trips_folders <- dir(path_to_trips)
+
+x_trip <- 2 # second trip for the ID
+path_to_ncdf <- paste0(path_to_trips, ID_trips_folders[x_trip], "/netCDF/")
+
+```
+
+## Pressure
+
+```{r Pressure , echo=FALSE, include = F}
+# open Barometric pressure file
+baro_name <- dir(path_to_ncdf, pattern = "Barometric")
+nc_file <- nc_open(paste0(path_to_ncdf, baro_name))
+print(nc_file) # getting all the characteristics of the file
+Pressure_matrix <- t(ncvar_get(nc_file, "Full_matrix"))
+nc_close(nc_file)
+Pressure_df <- as.data.frame(Pressure_matrix)
+colnames(Pressure_df) <- c("Time","Lon","Lat","Pressure_hPa")
+str(Pressure_df)
+Pressure_df$Time <- as.POSIXct(Pressure_df$Time, tz="GMT", origin = "1970-01-01 00:00:00") + hours(5) # adding time difference with Crozet
+head(Pressure_df$Time) 
+```
+
+### Some context for each track's pressure data 
+
+* Source: Ollie's notebooks and email exchanges between Jelle, Ollie and me
+
+* The data are not calibrated yet.
+* Since there should be more or less 5-min segments of data every hour, the raw data at 10 Hz are first divided into 5 minute segments (or 15, but it will only contain 5)
+* Data cleaning is done on these segments. So, each segments:
+  * Assuming that barometric pressure distributes normally --Jelle said it's a safe assumption --, outliers are filtered out by first obtaining z-scores
+  and keeping the observations whose absolute z-scores are below 3. 
+  * Then, if consecutive observations show a difference greater than 2hPa (meaning a ~20m difference),
+  the following value is replaced by the preceding value. 
+* Resampling is done at 1 Hz. It is basically done by fitting sinusoids to the data (Fast Fourier Transform) and then taking value points. We're using the obspy.resample function in python which is a wrapper of scipy.signal.resample
+* Everything is saved into a netCDF file
+
+
+### With GPS
+
+```{r gpsPressurePlot , echo=FALSE}
+###create an interactive figure of lat long using ggplotly with the colony point
+data <- Pressure_df
+lon<-c(data$Lon,51.706972)
+lat<-c(data$Lat,-46.358639)
+p0 <- ggplot(data, aes(Lon, Lat)) +
+  geom_point(aes(color = Pressure_hPa),size=0.5)+
+  geom_text(x=colony[1], y=colony[2], label='Colony')+
+  geom_point(x=colony[1], y=colony[2], color="red")+
+  scale_colour_viridis_c(option = "magma", direction = -1) +
+  xlim(min(lon), max(lon))+
+  ylim(min(lat), max(lat)) +
+  theme_bw()
+ggplotly(p0,
+         dynamicTicks = TRUE, session="knitr")
+```
+
+### Time series
+```{r PressureTS , echo=FALSE}
+###create an interactive figure of lat long using ggplotly with the colony point
+pPresTS <- data %>%
+  ggplot(aes(x =Time, y = Pressure_hPa)) +
+  geom_point(aes(color = Pressure_hPa),size=0.5)+
+  scale_colour_viridis_c(option = "magma", direction = -1) +
+  theme_minimal()
+ggplotly(pPresTS,
+         dynamicTicks = TRUE, session="knitr")
+
+```
+
+## Infrasound
+
+### Some context for each track's infrasound data
+
+* Source: Ollie's notebooks, email exchanges between Jelle, Ollie and me, some reading and youtube videos
+
+* The data are calibrated.
+* Since there should be more or less 5-min segments of data every hour (could be 1), the raw data at 10 Hz are first divided into 5 minute segments (or 15, but it will only contain 5)
+* Data cleaning is done on these segments. So, each segments:
+  * Assuming that absolute pressure distributes normally, outliers are filtered out by first obtaining z-scores
+  and keeping the observations whose absolute z-scores are below 3. 
+  * Then, if consecutive observations show a difference greater than 10 (I don't know why 10),
+  the following value is replaced by the preceding value. 
+* No resampling
+* For each segment, the power spectral density is estimated using Welch's method;
+  it basically divides data into overlapping segments, computing a modified periodogram for
+  each segment and averaging the periodograms
+* The PSD data are transformed to obtain SPL as $10 \times \log(PSD/(2*10^{-5})*2))$
+* The SPL data are saved into a netCDF file
+
+```{r Infrasound , echo=FALSE, include = F}
+# open Infrasound file
+sound_name <- dir(path_to_ncdf, pattern = "Sound")
+
+nc_file <- nc_open(paste0(path_to_ncdf, sound_name))
+print(nc_file) # getting all the characteristics of the file
+
+# getting the names of the columns
+names_var <- names(nc_file$var)
+names_var <- names_var[1:(length(names_var)-1)]
+SPL_Matrix <- ncvar_get(nc_file, "Full_matrix")
+nc_close(nc_file)
+SPL_df <- as.data.frame(SPL_Matrix)
+colnames(SPL_df) <- c("Time",names_var[2:length(names_var)])
+str(SPL_df)
+Freq <- SPL_df[1,4:dim(SPL_df)[2]] # These are the frequencies for SPL
+SPL_df <- SPL_df[-1,]
+SPL_df$Time <- as.POSIXct(SPL_df$Time, tz="GMT", origin = "1970-01-01 00:00:00") + hours(5)
+# We may not be interested in each frequency for now
+# 
+
+# We'll make two categories of SPL: 0.07-1 and 1-5
+SPL_low <- apply(SPL_df[,which(Freq < 1 & Freq > 0.07)+3],1,mean)
+SPL_high <- apply(SPL_df[,which(Freq > 1)+3],1,mean)
+
+SPL_cat <- cbind.data.frame(SPL_df[,1:3], SPL_low, SPL_high)
+```
+
+
+### GPS - Sound Pressure Level from Low Infrasound (0.07-1Hz)
+```{r gpsSPLlowPlot , echo=FALSE}
+###create an interactive figure of lat long using ggplotly with the colony point
+data <- SPL_cat
+lon<-c(data$Lon,51.706972)
+lat<-c(data$Lat,-46.358639)
+pGPSlow <- ggplot(data, aes(Lon, Lat)) +
+  geom_point(aes(color = SPL_low),size=0.5)+
+  geom_text(x=colony[1], y=colony[2], label='Colony')+
+  geom_point(x=colony[1], y=colony[2], color="red")+
+  scale_colour_viridis_c(option = "magma", direction = -1) +
+  xlim(min(lon), max(lon))+
+  ylim(min(lat), max(lat)) +
+  theme_bw()
+ggplotly(pGPSlow,
+         dynamicTicks = TRUE, session="knitr")
+```
+
+### Time series of Sound Pressure Level from Low Infrasound (0.07-1Hz)
+```{r SPLlowTS , echo=FALSE}
+###create an interactive figure of lat long using ggplotly with the colony point
+pSPLlowTS <- data %>%
+  ggplot(aes(x =Time, y = SPL_low)) +
+  geom_point(aes(color = SPL_low),size=0.5)+
+  scale_colour_viridis_c(option = "magma", direction = -1) +
+  theme_minimal()
+ggplotly(pSPLlowTS,
+         dynamicTicks = TRUE, session="knitr")
+
+```
+
+### GPS - Sound Pressure Level from High Infrasound (1-5Hz)
+```{r gpsSPLhighPlot , echo=FALSE}
+###create an interactive figure of lat long using ggplotly with the colony point
+data <- SPL_cat
+lon<-c(data$Lon,51.706972)
+lat<-c(data$Lat,-46.358639)
+pGPShigh <- ggplot(data, aes(Lon, Lat)) +
+  geom_point(aes(color = SPL_high),size=0.5)+
+  geom_text(x=colony[1], y=colony[2], label='Colony')+
+  geom_point(x=colony[1], y=colony[2], color="red")+
+  scale_colour_viridis_c(option = "magma", direction = -1) +
+  xlim(min(lon), max(lon))+
+  ylim(min(lat), max(lat)) +
+  theme_bw()
+ggplotly(pGPShigh,
+         dynamicTicks = TRUE, session="knitr")
+```
+
+### Time series of Sound Pressure Level from High Infrasound (1-5Hz)
+```{r SPLhighTS , echo=FALSE}
+###create an interactive figure of lat long using ggplotly with the colony point
+pSPLhighTS <- data %>%
+  ggplot(aes(x =Time, y = SPL_high)) +
+  geom_point(aes(color = SPL_high),size=0.5)+
+  scale_colour_viridis_c(option = "magma", direction = -1) +
+  theme_minimal()
+ggplotly(pSPLhighTS,
+         dynamicTicks = TRUE, session="knitr")
+
+```
