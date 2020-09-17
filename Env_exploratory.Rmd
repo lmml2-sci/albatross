@@ -35,14 +35,22 @@ path_to_env_files <- "./Databse Ollie/"
 ID_folders <- dir(path_to_env_files, pattern = "ID")
 
 # let's do this for the 1st bird
-x <- 7 # first ID
+x <- 1 # first ID
 path_to_trips <- paste0(path_to_env_files, ID_folders[x], "/")
 ID_trips_folders <- dir(path_to_trips)
 
 x_trip <- 2 # second trip for the ID
 path_to_ncdf <- paste0(path_to_trips, ID_trips_folders[x_trip], "/netCDF/")
-
 ```
+<!-- ## PDF trip  -->
+
+<!-- ```{r PDF trip , echo=FALSE, include = F} -->
+<!-- # open PDF trip file -->
+<!-- trip_name <- dir(path_to_ncdf, pattern = "PDF") -->
+<!-- nc_file <- nc_open(paste0(path_to_ncdf, trip_name)) -->
+<!-- print(nc_file) # getting all the characteristics of the file -->
+<!-- #need to try to open and explore p_f and p_db -->
+<!-- ``` -->
 
 ## Pressure
 
@@ -56,7 +64,7 @@ nc_close(nc_file)
 Pressure_df <- as.data.frame(Pressure_matrix)
 colnames(Pressure_df) <- c("Time","Lon","Lat","Pressure_hPa")
 str(Pressure_df)
-Pressure_df$Time <- as.POSIXct(Pressure_df$Time, tz="GMT", origin = "1970-01-01 00:00:00") + hours(5) # adding time difference with Crozet
+Pressure_df$Time <- as.POSIXct(Pressure_df$Time, tz="GMT", origin = "1970-01-01 00:00:00") + hours(5) # adding time difference with Crozet, so to be in local time rather than UTC. 
 head(Pressure_df$Time) 
 ```
 
@@ -67,7 +75,7 @@ head(Pressure_df$Time)
 * The data are not calibrated yet.
 * Since there should be more or less 5-min segments of data every hour, the raw data at 10 Hz are first divided into 5 minute segments (or 15, but it will only contain 5)
 * Data cleaning is done on these segments. So, each segments:
-  * Assuming that barometric pressure distributes normally --Jelle said it's a safe assumption --, outliers are filtered out by first obtaining z-scores
+  * Assuming that barometric pressure distributes normally --Jelle said it's a safe assumption --, outliers are filtered out by first obtaining z-scores (gives you an idea of how far from the mean a data point is. But more technically it's a measure of how many standard deviations below or above the population mean a raw score is)
   and keeping the observations whose absolute z-scores are below 3. 
   * Then, if consecutive observations show a difference greater than 2hPa (meaning a ~20m difference),
   the following value is replaced by the preceding value. 

@@ -47,7 +47,7 @@ sensor_table <- read.csv('Logger-Combined_data/Logger_deployment_tbl.csv', strin
 gps <- read.csv('Logger-Combined_data/gps_clean.csv', stringsAsFactors=F)
 gps$timez <- ymd_hms(gps$gps_dt)# assign the Universal Coordinated Time Zone (UTC) to the parsed date
 gps$timezlocal<-gps$timez+hours(5)
-gps$timezlocal2<-with_tz(gps$timez, tz="Indian/Kerguelen")
+gps$timezlocal2<-with_tz(gps$timez, tz="Indian/Kerguelen")# This was just to check that with_tz function gives equal results as adding 5 hours. 
 gps$time_sec<- seconds(gps$timez)# time in seconds period object. 
 
 
@@ -93,17 +93,20 @@ colony <- st_sfc(st_point(colony), crs = wsg)
 
 # summ_visualizations function to visuzlice raw data for each id. 
 # dawn and dusk times are in UTC times. +5 hours would be local time. 
-# they are an approximation (Now its only the mean time for the whole data deployment period). Once all data for the same individual is on
-# the same dataframe then the closer GPS location will be 
+# they are an approximation (Now its only the mean time for the whole data deployment period). Once all data for the same individual is on the same dataframe then the closer GPS location will be 
 # added to each acc and magnet value and so the time civil twilight will be updated for each datapoint. 
-a<- c('ID101_2_IS_BC1', 'ID103_1_wind_NT0', 'ID107_1_IS_EX9', 'ID110_1_IS_BY7','ID110_1_IS_JD1','ID111_2_IS_DT5', 
+a<- c('ID101_1_IS_FU4','ID101_2_IS_BC1','ID103_1_wind_NT0','ID103_1_wind_W38','ID107_1_IS_EX9',
+      'ID108_1_IS_JA3','ID108_1_wind_B64','ID110_1_IS_BY7','ID110_1_IS_JD1','ID111_1_wind_FK1','ID111_2_IS_DT5',
       'ID112_1_IS_BV2', 'ID112_2_wind_U92','ID116_1_wind_EK3', 'ID121_1_IS_BC4', '11 ID122_1_IS_K81', 'ID122_1_wind_BR3')
-b<-c("16:20:00","16:34:00","16:35:00","16:59:00","16:24:00", "16:11:00", "16:50:00", "16:30:00", "16:33:00", "16:33:00", "16:32:00", "16:04:00")
-c<- c("01:15:00","01:04:00","01:03:00", "00:33:00","01:14:00", "01:26:00", "01:44:00", "01:08:00", "01:05:00", "01:05:00", "01:06:00", "01:33:00")
+b<-c("16:31:00","16:20:00","16:34:00","16:35:00","16:02:00","16:59:00","16:24:00","16:55:00","16:59:00", "16:11:00", "16:50:00","16:12:00", "16:30:00", "16:33:00", "16:33:00", "16:32:00", "16:04:00")
+d<- c("01:07:00","01:15:00","01:04:00","01:03:00","01:34:00", "00:33:00","01:14:00","00:39:00","00:33:00", "01:26:00", "01:44:00","01:25:00", "01:08:00", "01:05:00", "01:05:00", "01:06:00", "01:33:00")
 
-params<-cbind(a,b,c)
+params<-cbind(a,b,d)
 
-
+x=12
+id_val=params[x,1]
+duskam=params[x,2]
+dawnam=params[x,3] 
 
 
 summ_visualizations <- function (id_val, duskam, dawnam){
@@ -166,9 +169,10 @@ summ_visualizations <- function (id_val, duskam, dawnam){
   mag_id1$time_category <- as.factor(mag_id1$time_category)
   #table(mag_id1$time_category)
   
-  ##create gps dataframe with datapoints sampled at a sampling frequency bigger than 60Hz, i.e. with no more than 1 sample every minute
+  ##create gps dataframe with accurate GPS fixes.For quick re-acquisition of the GPS after off-times, the GPS engine should have access to almanac and ephemeris data permanently stored inside the logger. When the GPS is powered-up again, the data will be used to allow a quick re-acquisition as soon as a coarse time information is available. However, if the ephemeris data are not up to date, then the GPS will take as many GPS fixes as needed until the position is accurate. The first position taken after the GPS is switched on, after a period of being switched off, is bad and then it gets better and better and better (a position is taken every 1 second), until the position accuracy is good, i.e., when the horizontal and vertical position errors are smaller. This means, that the last position can be trusted. 
+  #Thus we select all GPS fixes with a timeinterval in between fixes of 600Hz or more. 10 minutes or more. This was the programmed sampling frequency. 
   
-  gps_id1_filt<-gps_id1[gps_id1[,"timeinterv"]>=60,]
+  gps_id1_filt<-gps_id1[gps_id1[,"timeinterv"]>=600,]
 results<-list(gps_id1=gps_id1, acc_id1=acc_id1, mag_id1=mag_id1, gps_id1_filt=gps_id1_filt) 
  return(results) 
 }
@@ -272,6 +276,19 @@ gg_hist <- highlight(ggplotly(pGPS), "plotly_selected")
 crosstalk::bscols(gg_hist, DT::datatable(sum_df))
 ```
 
+## GPS sampling rate 2
+```{r cars005 , echo=FALSE , warning=F}
+#plot the sampling rate of each point
+GPSres<-diff(data$time_sec@.Data)
+ea=as.data.frame(GPSres)
+sum_df <- data.frame(t(unclass(summary(GPSres))))# create a summary of the sampling frequencies
+rownames(sum_df) <- NULL
+pGPS<-ggplot(ea, aes(x=GPSres))+
+  geom_histogram(breaks=seq(600,20000, by=10), fill="red") # supposed to be a 10 min increment so 600 seconds
+gg_hist <- highlight(ggplotly(pGPS), "plotly_selected")
+crosstalk::bscols(gg_hist, DT::datatable(sum_df))
+```
+
 # GPS filtered {.tabset}
 
 only gps data with a sampling frequency >= 60 Hz, i.e, no more than one sample every minute
@@ -334,6 +351,19 @@ sum_df <- data.frame(t(unclass(summary(GPSres))))# create a summary of the sampl
 rownames(sum_df) <- NULL
 pGPS<-ggplot(ea, aes(x=GPSres))+
   geom_histogram(breaks=seq(0,650, by=1), fill="red") # supposed to be a 10 min increment so 600 seconds
+gg_hist <- highlight(ggplotly(pGPS), "plotly_selected")
+crosstalk::bscols(gg_hist, DT::datatable(sum_df))
+```
+
+## GPS sampling rate 2 
+```{r cars050gps_id1_filt , echo=FALSE , warning=F}
+#plot the sampling rate of each point
+GPSres<-diff(results$gps_id1$time_sec@.Data)
+ea=as.data.frame(GPSres)
+sum_df <- data.frame(t(unclass(summary(GPSres))))# create a summary of the sampling frequencies
+rownames(sum_df) <- NULL
+pGPS<-ggplot(ea, aes(x=GPSres))+
+  geom_histogram(breaks=seq(600,20000, by=10), fill="red") # supposed to be a 10 min increment so 600 seconds
 gg_hist <- highlight(ggplotly(pGPS), "plotly_selected")
 crosstalk::bscols(gg_hist, DT::datatable(sum_df))
 ```
