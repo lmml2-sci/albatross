@@ -97,16 +97,11 @@ colony <- st_sfc(st_point(colony), crs = wsg)
 # added to each acc and magnet value and so the time civil twilight will be updated for each datapoint. 
 a<- c('ID101_1_IS_FU4','ID101_2_IS_BC1','ID103_1_wind_NT0','ID103_1_wind_W38','ID107_1_IS_EX9',
       'ID108_1_IS_JA3','ID108_1_wind_B64','ID110_1_IS_BY7','ID110_1_IS_JD1','ID111_1_wind_FK1','ID111_2_IS_DT5',
-      'ID112_1_IS_BV2', 'ID112_2_wind_U92','ID116_1_wind_EK3', 'ID121_1_IS_BC4', '11 ID122_1_IS_K81', 'ID122_1_wind_BR3')
+      'ID112_1_IS_BV2', 'ID112_2_wind_U92','ID116_1_wind_EK3', 'ID121_1_IS_BC4', 'ID122_1_IS_K81', 'ID122_1_wind_BR3')
 b<-c("16:31:00","16:20:00","16:34:00","16:35:00","16:02:00","16:59:00","16:24:00","16:55:00","16:59:00", "16:11:00", "16:50:00","16:12:00", "16:30:00", "16:33:00", "16:33:00", "16:32:00", "16:04:00")
 d<- c("01:07:00","01:15:00","01:04:00","01:03:00","01:34:00", "00:33:00","01:14:00","00:39:00","00:33:00", "01:26:00", "01:44:00","01:25:00", "01:08:00", "01:05:00", "01:05:00", "01:06:00", "01:33:00")
 
 params<-cbind(a,b,d)
-
-x=12
-id_val=params[x,1]
-duskam=params[x,2]
-dawnam=params[x,3] 
 
 
 summ_visualizations <- function (id_val, duskam, dawnam){
@@ -181,7 +176,7 @@ results<-list(gps_id1=gps_id1, acc_id1=acc_id1, mag_id1=mag_id1, gps_id1_filt=gp
 
 # ID
 ```{r animal1, include=FALSE}
-x=1 # x equals the id
+x=12 # x equals the id
 results <- summ_visualizations(id_val=params[x,1],duskam=params[x,2], dawnam=params[x,3])
 ```
 
@@ -345,7 +340,7 @@ ggplotly(pspeed,
 ## GPS sampling rate
 ```{r cars05gps_id1_filt , echo=FALSE , warning=F}
 #plot the sampling rate of each point
-GPSres<-diff(results$gps_id1$time_sec@.Data)
+GPSres<-diff(results$gps_id1_filt$time_sec@.Data)
 ea=as.data.frame(GPSres)
 sum_df <- data.frame(t(unclass(summary(GPSres))))# create a summary of the sampling frequencies
 rownames(sum_df) <- NULL
@@ -358,7 +353,7 @@ crosstalk::bscols(gg_hist, DT::datatable(sum_df))
 ## GPS sampling rate 2 
 ```{r cars050gps_id1_filt , echo=FALSE , warning=F}
 #plot the sampling rate of each point
-GPSres<-diff(results$gps_id1$time_sec@.Data)
+GPSres<-diff(results$gps_id1_filt$time_sec@.Data)
 ea=as.data.frame(GPSres)
 sum_df <- data.frame(t(unclass(summary(GPSres))))# create a summary of the sampling frequencies
 rownames(sum_df) <- NULL

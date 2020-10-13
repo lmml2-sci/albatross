@@ -35,11 +35,11 @@ path_to_env_files <- "./Databse Ollie/"
 ID_folders <- dir(path_to_env_files, pattern = "ID")
 
 # let's do this for the 1st bird
-x <- 1 # first ID
+x <- 2 # first ID
 path_to_trips <- paste0(path_to_env_files, ID_folders[x], "/")
 ID_trips_folders <- dir(path_to_trips)
 
-x_trip <- 2 # second trip for the ID
+x_trip <-2 # second trip for the ID
 path_to_ncdf <- paste0(path_to_trips, ID_trips_folders[x_trip], "/netCDF/")
 ```
 <!-- ## PDF trip  -->
@@ -51,6 +51,11 @@ path_to_ncdf <- paste0(path_to_trips, ID_trips_folders[x_trip], "/netCDF/")
 <!-- print(nc_file) # getting all the characteristics of the file -->
 <!-- #need to try to open and explore p_f and p_db -->
 <!-- ``` -->
+
+# ID
+```{r animal1, include=TRUE}
+path_to_ncdf
+```
 
 ## Pressure
 
