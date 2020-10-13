@@ -97,6 +97,45 @@ first_Qu_BaromP=quantile(Pressure_hPa,probs = 0.25,na.rm = T),
 
 ```
 
+### Let's make a graph
+
+```{r Pressure graph , echo=FALSE, include = TRUE, out.width = '200%'}
+
+# Color-blind friendly palette from http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#a-colorblind-friendly-palette
+# The palette with black:
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+ggplot(data = tabla, aes(x = group)) +
+  geom_point(aes(y = mean_BaromP), cex = 0.5)  + # black points as means
+  geom_errorbar(aes(ymin = min_BaromP, ymax = max_BaromP), color =  cbbPalette[3]) + # blueish bars for min and max
+  geom_errorbar(aes(ymin = first_Qu_BaromP, ymax = third_Qu_BaromP), color =  cbbPalette[4]) + # greenish bars for q1 and q3
+  geom_line(aes(y = median_BaromP), color = cbbPalette[4], linetype = 3) + # greenish dash lines linking medians
+  labs(y = "stats", x = "time intervals") +
+  scale_y_continuous(limits=c(floor(min(tabla$min_BaromP)),ceiling(max(tabla$max_BaromP)))) +
+  theme_bw()
+
+```
+### Now without max and min
+
+```{r Pressure graph 2 , echo=FALSE, include = TRUE, out.width = '200%'}
+
+# Color-blind friendly palette from http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#a-colorblind-friendly-palette
+# The palette with black:
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+ggplot(data = tabla, aes(x = group)) +
+  geom_errorbar(aes(ymin = first_Qu_BaromP, ymax = third_Qu_BaromP), color =  cbbPalette[4]) + # greenish bars for q1 and q3
+  geom_line(aes(y = median_BaromP), color = cbbPalette[4], linetype = 3) + # greenish dash lines linking medians
+  geom_point(aes(y = mean_BaromP), cex = 0.5)  + # black points as means
+  geom_point(aes(y = median_BaromP), cex = 0.5, shape = 22, color = cbbPalette[6])  + # squares as medians
+  labs(y = "stats", x = "time intervals") +
+  scale_y_continuous(limits=c(floor(min(tabla$min_BaromP)),ceiling(max(tabla$max_BaromP)))) +
+  theme_bw()
+
+```
+
+
+
 ### Some context for each track's pressure data 
 
 * Source: Ollie's notebooks and email exchanges between Jelle, Ollie and me
