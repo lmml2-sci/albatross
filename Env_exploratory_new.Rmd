@@ -32,7 +32,7 @@ path_to_env_files <- "./DataBaseOllieNew/"
 ID_folders <- dir(path_to_env_files, pattern = "ID")
 
 # let's do this for the 1st bird
-x <-1 # first ID
+x <-10 # first ID
 path_to_trips <- paste0(path_to_env_files, ID_folders[x], "/")
 ID_trips_folders <- dir(path_to_trips)
 
@@ -66,37 +66,52 @@ str(Pressure_df)
 Pressure_df$Time_o<-Pressure_df$Time #time original
 Pressure_df$Time <- as.POSIXct(Pressure_df$Time, tz="GMT", origin = "1970-01-01 00:00:00") + hours(5) # adding time difference with Crozet, so to be in local time rather than UTC. 
 head(Pressure_df$Time) 
-#Pressure_df<-Pressure_df[Pressure_df[,"Time"]<= "2020-02-17 03:50:00",]#select only data collected before the 19th of Feb for ID101_2_IS_BC1 x=1 trip=1
-Pressure_df<-Pressure_df[Pressure_df[,"Time"]<= "2020-02-12 18:00:00",]#select only data collected before the 12th of Feb for ID101/Trip_FU4 x=1 trip=1
+#Pressure_df<-Pressure_df[Pressure_df[,"Time"]<= "2020-02-17 04:00:00",]#select only data collected before the 17th of Feb for ID101_2_IS_BC1 x=1 trip=1
+#Pressure_df<-Pressure_df[Pressure_df[,"Time"]<= "2020-02-12 18:00:00",]#select only data collected before the 12th of Feb for ID101/Trip_FU4 x=1 trip=1
 
-Presres<-diff(Pressure_df$Time_o)
 
 # #statistic metric
-# #create  an index fore each 5 minutes bout every hour. 
+# #create  an index fore each 5 minutes bout every hour.
+
+Presres<-diff(Pressure_df$Time_o)#  estimate the time between each sample taken. 
+summary(Presres)# the median should be around 0.1, which is relates with 10 samples taken in a second, i.e., sample frequency of 10Hz.
 Presres3<-c(Presres,0)
-Pressure_df3<- cbind(Presres3,Pressure_df, Pressure_df$Time_o)
+Pressure_df3<- cbind(Presres3,Pressure_df)
 
 
+# the logger is programmed to take10 samples within a second for about 1 consecutive minute (600 samples). However sometimes there is are less than 10 samples taken within a second, and they could be taken for longer than a minute.  To select when a new bout starts 
+#we define this as when the time difference between each sample is bigger than 50, i.e., more than 5 seconds without taking any sample. 
 bout_st<-c(0,which(Pressure_df3$Presres3>50))
-diff(bout_st)
-sum(diff(bout_st))
+diff(bout_st)# this gives the number of samples within each bout.
+sum(diff(bout_st))# check that this is the same as the number of values within Pressure_df3
 lastp<-length(Pressure_df3$Presres3)-sum(diff(bout_st))
-idx<-c(diff(bout_st),lastp)
-Pressure_df3$group=(rep(1:length(idx),times=idx))
+idx<-c(diff(bout_st),lastp)# this is the last point taken for each bout. 
+Pressure_df3$group=(rep(1:length(idx),times=idx))# we divide the data in bouts. 
+
+#provide number of points in each bout
 tabla<-Pressure_df3%>%group_by(group)%>%summarise(median_BaromP=median(Pressure_hPa,na.rm = T),
                                            mean_BaromP=mean(Pressure_hPa,na.rm = T),
                                            min_BaromP=min(Pressure_hPa,na.rm = T),
                                            max_BaromP=max(Pressure_hPa,na.rm = T),
                                            first_Qu_BaromP=quantile(Pressure_hPa,probs = 0.25,na.rm = T),
-                                           third_Qu_BaromP=quantile(Pressure_hPa,probs = 0.75,na.rm = T))
+                                           third_Qu_BaromP=quantile(Pressure_hPa,probs = 0.75,na.rm = T),
+                                           count=n(),
+                                           first_value = first(na.omit(Time_o))
+                                           )
+#Calculate the inter bout interval.
+tabla$IBI<- c(0,diff(tabla$first_value))# it should be approx one per hour
 
 tabla_global<-Pressure_df3%>%summarise(median_BaromP=median(Pressure_hPa,na.rm = T),
                                            mean_BaromP=mean(Pressure_hPa,na.rm = T),
                                            min_BaromP=min(Pressure_hPa,na.rm = T),
                                            max_BaromP=max(Pressure_hPa,na.rm = T),
                                            first_Qu_BaromP=quantile(Pressure_hPa,probs = 0.25,na.rm = T),
-                                           third_Qu_BaromP=quantile(Pressure_hPa,probs = 0.75,na.rm = T))
-
+                                           third_Qu_BaromP=quantile(Pressure_hPa,probs = 0.75,na.rm = T)
+)
+                                      
+tabla_global$mean_IBI_sec<-mean(tabla$IBI)
+tabla_global$mean_samples_within_bout<-mean(tabla$count)
+tabla_global$tot_group_n<-max(tabla$group)
 
 ```
 
@@ -117,19 +132,15 @@ tabla_global<-Pressure_df3%>%summarise(median_BaromP=median(Pressure_hPa,na.rm =
 
 
 ## Time series
-only analyze data collected before 2020-02-12 18:00:00
-
 
 
 ```{r Pressure2 , echo=FALSE, include = T}
-paste("number of observations is", nrow(Pressure_df))
-paste("summary diff time Pressure sensor in Hz", summary(Presres))
-paste("Min, 1st Qu, Median, Mean, 3rdQu, Max")
-Presres2<-which(Presres > 1)
-paste("Summary diff time Pressure sensor > 1 sec", summary(Presres2))
-paste("Min, 1st Qu, Median, Mean, 3rdQu, Max")
+# paste("number of observations is", nrow(Pressure_df))
+# paste("summary diff time Pressure sensor in Hz", summary(Presres))
+# paste("Min, 1st Qu, Median, Mean, 3rdQu, Max")
+
 # as.data.frame(tabla)
-# as.data.frame(tabla_global)
+as.data.frame(tabla_global)
 
 
 ```
@@ -152,6 +163,7 @@ ggplot(data = tabla, aes(x = group)) +
   scale_y_continuous(limits=c(floor(min(tabla$min_BaromP)),ceiling(max(tabla$max_BaromP)))) +
   theme_bw()
 ```
+
 ### Now without max and min
 black points: mean
 squares medians
@@ -173,16 +185,57 @@ ggplot(data = tabla, aes(x = group)) +
 
 ```
 
-```{r PressureTS , echo=FALSE}
-###create an interactive figure of lat long using ggplotly with the colony point
-data <- Pressure_df[10000:15000,]
-pPresTS <- data %>%
-  ggplot(aes(x =Time, y = Pressure_hPa)) +
-  geom_point(aes(color = Pressure_hPa),size=0.5)+
-  scale_colour_viridis_c(option = "magma", direction = -1) +
-  theme_minimal()
-ggplotly(pPresTS,
-         dynamicTicks = TRUE, session="knitr")
+### Data to check
+Here is plotted how data should look like in first plot
+
+Second plot shows the data within each bout for which the median and the mean differs by more than 0.3hPa. 
+
+```{r PressureTS , echo=FALSE, warning=FALSE}
+
+###create an interactive figure to see how a bout with a difference of less than 0.3 hPa between the mean and the median looks like. 
+datapool<-unlist(c(tabla[abs(tabla$median_BaromP-tabla$mean_BaromP)<0.3,1]))
+datagood<-sample(datapool,1)
+
+data2plot_good<-Pressure_df3[Pressure_df3$group==datagood,]
+pPresTS2 <- data2plot_good %>%
+     ggplot(aes(x =Time_o, y = Pressure_hPa)) +
+     geom_point(aes(color = Pressure_hPa),size=0.5)+
+     scale_colour_viridis_c(option = "magma", direction = -1) +
+     theme_minimal()
+ ggplotly(pPresTS2,
+          dynamicTicks = TRUE, session="knitr")
+ 
+###create an interactive figure to inspect those points with a difference of 0.3 hPa between the mean and the median.
+# data2check<-unlist(c(tabla[abs(tabla$median_BaromP-tabla$mean_BaromP)>0.3,1]))
+# 
+# data2plot_full <- NULL# prepare a container
+# for (i in 1:length(data2check))
+# {
+#   data2plot<-Pressure_df3[Pressure_df3$group==data2check[i],]
+#   data2plot_full<-rbind(data2plot_full,data2plot)
+#   #create a plot for each bout that needs inspection
+# }
+# 
+# pPresTS <- data2plot_full %>%
+#      ggplot(aes(x =Time, y = Pressure_hPa)) +
+#      geom_point(aes(color = Pressure_hPa),size=0.5)+
+#      scale_colour_viridis_c(option = "magma", direction = -1) +
+#      theme_minimal()+
+#      facet_wrap(~group)
+#  ggplotly(pPresTS,
+#           dynamicTicks = TRUE, session="knitr")
+
+#data <- Pressure_df3[1:15000,]
+# m0 <- highlight_key(data)
+# p0<-  ggplot(m0, aes(x =Time, y = Pressure_hPa)) +
+#   geom_point(aes(color = Pressure_hPa),size=0.5)+
+#   scale_colour_viridis_c(option = "magma", direction = -1) +
+#   theme_minimal()
+# gg0 <- highlight(ggplotly(p0), "plotly_selected")
+# crosstalk::bscols(gg0, DT::datatable(m0))# 
+
+
+
 plot(Pressure_df$Time, Pressure_df$Pressure_hPa)
 
 ```
@@ -212,9 +265,6 @@ plot(Pressure_df$Time, Pressure_df$Pressure_hPa)
 # open Infrasound file
 
 
-
-
-
 path_to_ncdf_sound <- paste0(path_to_ncdf, "Infrasd/")
 sound_name <- dir(path_to_ncdf_sound, pattern = "SPL")
 nc_file <- nc_open(paste0(path_to_ncdf_sound, sound_name))
@@ -230,8 +280,7 @@ colnames(SPL_df) <- c("Time")
 str(SPL_df)
 Freq <- SPL_df[1,2:dim(SPL_df)[2]] # These are the frequencies for SPL - for ID111_2_IS_DT5 SPL_df[13,2:dim(SPL_df)[2]]
 SPL_df <- SPL_df[-1,]#  remove first row
-Time2<-SPL_df$Time
-Soundres<-diff(Time2)
+SPL_df$Time_o<-SPL_df$Time
 SPL_df$Time <- as.POSIXct(SPL_df$Time, tz="GMT", origin = "1970-01-01 00:00:00") + hours(5)
 # We may not be interested in each frequency for now
 #
@@ -240,12 +289,21 @@ SPL_df$Time <- as.POSIXct(SPL_df$Time, tz="GMT", origin = "1970-01-01 00:00:00")
 SPL_low <- apply(as.data.frame(SPL_df[,which(Freq < 1 & Freq > 0.07)+1]),1,mean)# what does the -inf mean?
 SPL_high <- apply(SPL_df[,which(Freq > 1)+1],1,mean)
 SPL_cat <- data.frame(Time=SPL_df[,1], SPL_low=SPL_low, SPL_high=SPL_high)
+
+
+
+
+tabla_global_SPL<-NULL
+tabla_global_SPL$tot_group_n<-nrow(SPL_cat)
+tabla_global_SPL$mean_IBI<-mean(diff(SPL_df$Time_o))
+
+
+
 ```
 
 ### Time series of Sound Pressure Level from Low Infrasound (0.07-1Hz)
 ```{r SPLlowTS2 , echo=FALSE, include = T}
-paste("number of observations is", nrow(SPL_df))
-paste("summary diff time Pressure sensor", summary(Soundres))
+as.data.frame(tabla_global_SPL)
 ```
 
 ```{r SPLlowTS , echo=FALSE}
