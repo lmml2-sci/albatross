@@ -274,21 +274,27 @@ print(nc_file) # getting all the characteristics of the file
 names_var <- names(nc_file$var)
 names_var <- names_var[1:(length(names_var)-1)]
 SPL_Matrix <- ncvar_get(nc_file, "SPLdata")
+Freq<-ncvar_get(nc_file,"Frequencies")
+
+
 nc_close(nc_file)
 SPL_df <- as.data.frame(SPL_Matrix)
-colnames(SPL_df) <- c("Time")
+colnames(SPL_df) <- c("Time",Freq[1:length(Freq)])
 str(SPL_df)
-Freq <- SPL_df[1,2:dim(SPL_df)[2]] # These are the frequencies for SPL - for ID111_2_IS_DT5 SPL_df[13,2:dim(SPL_df)[2]]
+
+#Freq <- SPL_df[1,2:dim(SPL_df)[2]] # These are the frequencies for SPL - for ID111_2_IS_DT5 SPL_df[13,2:dim(SPL_df)[2]]
 SPL_df <- SPL_df[-1,]#  remove first row
 SPL_df$Time_o<-SPL_df$Time
 SPL_df$Time <- as.POSIXct(SPL_df$Time, tz="GMT", origin = "1970-01-01 00:00:00") + hours(5)
 # We may not be interested in each frequency for now
 #
 
-# We'll make two categories of SPL: 0.07-1 and 1-5
-SPL_low <- apply(as.data.frame(SPL_df[,which(Freq < 1 & Freq > 0.07)+1]),1,mean)# what does the -inf mean?
+# We'll make two categories of SPL: 0.07-1 and 1-4
+SPL_low <- apply(SPL_df[,which(Freq < 1 & Freq > 0.07)+1],1,mean)# what does the -inf mean?
 SPL_high <- apply(SPL_df[,which(Freq > 1)+1],1,mean)
-SPL_cat <- data.frame(Time=SPL_df[,1], SPL_low=SPL_low, SPL_high=SPL_high)
+SPL_cat <- cbind.data.frame(Time=SPL_df[,1], SPL_low=SPL_low, SPL_high=SPL_high)
+
+
 
 
 
