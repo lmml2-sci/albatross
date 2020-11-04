@@ -24,7 +24,7 @@ x <-7 # first ID
 path_to_trips <- paste0(path_to_env_files, ID_folders[x], "/")
 ID_trips_folders <- dir(path_to_trips)
 
-x_trip <-2 # second trip for the ID
+x_trip <-1 # second trip for the ID
 path_to_ncdf <- paste0(path_to_trips, ID_trips_folders[x_trip], "/netCDF/")
 
 # open Barometric pressure file
@@ -50,6 +50,10 @@ Pressure_df$Time <- as.POSIXct(Pressure_df$Time, tz="GMT", origin = "1970-01-01 
 ##select only data collected before the 12th of Feb
 #Pressure_df<-Pressure_df[Pressure_df[,"Time"]<= "2020-02-12 18:00:00",]
 
+###ID110_1_IS_BY7 x=5 trip=1    
+##select only data collected before 24th of January. 
+#Pressure_df<-Pressure_df[Pressure_df[,"Time"]<= "2020-01-24 18:00:00",]
+
 
 # #statistic metric
 # #create  an index fore each 5 minutes bout every hour.
@@ -70,20 +74,22 @@ Pressure_df3$group=(rep(1:length(idx),times=idx))# we divide the data in bouts.
 
 
 ##ID103_1_wind_NT0 x=2 trip=1
-##group 52 and 60 should be removed. 
+##group 52 and 60  removed. 
 # Pressure_df3<-Pressure_df3 %>%
 #   filter(!group == 52 & !group == 60)
 
 
 ##ID107_1_IS_EX9  x=3 trip=1 
-## remove group 10. It could be that only the first subgroup of this bout should be deleted. Waiting for Ollies answer. 
-# Pressure_df3<-Pressure_df3 %>%
-#   filter(!group == 10)]
+## remove only the first subgroup of bout 10.
+# test<-filter(Pressure_df3, group == 10  & Pressure_hPa <1006)
+# Pressure_df3<-anti_join(Pressure_df3, test)
 
-##ID108_1_IS_JA3 x=4 trip=2
-## only keep group 41 abd 42.
-# Pressure_df3<-Pressure_df3 %>%
-#   filter(!group <42)
+
+##ID108_1_IS_JA3 x=4 trip=2 
+##Only keep bouts 42 and 43 and delete the points recording zero in these two bouts
+# test<-filter(Pressure_df3, group <42  & Pressure_hPa==0)
+# Pressure_df3<-anti_join(Pressure_df3, test)
+
 
 ##ID111_2_IS_DT5  x=6 trip=1
 ## remove last group n 83
@@ -91,10 +97,18 @@ Pressure_df3$group=(rep(1:length(idx),times=idx))# we divide the data in bouts.
 #   filter(!group == 83)
 
 ##ID112_1_IS_BV2  x=7 trip=1
-##group 17 and 163 should be removed, but once Ollie tell us we may just then take the last point for this bout as it seems good!!!
-Pressure_df3<-Pressure_df3 %>%
-  filter(!group == 17 & !group == 163)
-
+##only delete first points with equal values of groups 17 and 163. Ollie will redo the QC but the median should not be much different 
+# Pressure_df3<-Pressure_df3 %>%
+#   filter(!group == 17 & !group == 163)
+ # test<-filter(Pressure_df3, group == 17 & Pressure_hPa < 1007)# and smaller than 1007
+ # test2<-filter(Pressure_df3, group == 163 & Pressure_hPa < 1021.5)# and smaller than 1021.5
+ # test3<-anti_join(Pressure_df3, test)
+ # Pressure_df3<-anti_join(test3, test2)
+ 
+##ID116_1_wind_EK3   x=8 trip=1
+##group 55, 56, 57, 62, 63, 64, 65 and 66 have been removed as they have constant readings
+# Pressure_df3<-Pressure_df3 %>%
+#   filter(!group == 55 & !group == 56 & !group == 57 & !group > 61)
 
 #provide number of points in each bout
 tabla<-Pressure_df3%>%group_by(group)%>%summarise(median_BaromP=median(Pressure_hPa,na.rm = T),

@@ -32,7 +32,11 @@ path_to_env_files <- "./DataBaseOllieNew/"
 ID_folders <- dir(path_to_env_files, pattern = "ID")
 
 # let's do this for the 1st bird
+<<<<<<< HEAD
 x <-10 # first ID
+=======
+x <-2 # first ID
+>>>>>>> 8ae99f8593aca5e3e89dd3f4f21eb0f061520a11
 path_to_trips <- paste0(path_to_env_files, ID_folders[x], "/")
 ID_trips_folders <- dir(path_to_trips)
 
@@ -60,6 +64,7 @@ Pressure_matrix <- t(ncvar_get(nc_file, "Barodata"))
 nc_close(nc_file)
 Pressure_df <- as.data.frame(Pressure_matrix)
 colnames(Pressure_df) <- c("Time","Pressure_hPa")
+<<<<<<< HEAD
 
 
 str(Pressure_df)
@@ -89,10 +94,33 @@ idx<-c(diff(bout_st),lastp)# this is the last point taken for each bout.
 Pressure_df3$group=(rep(1:length(idx),times=idx))# we divide the data in bouts. 
 
 #provide number of points in each bout
+=======
+str(Pressure_df)
+Time3<-Pressure_df$Time
+Time2<-Pressure_df$Time
+Pressure_df$Time <- as.POSIXct(Pressure_df$Time, tz="GMT", origin = "1970-01-01 00:00:00") + hours(5) # adding time difference with Crozet, so to be in local time rather than UTC. 
+head(Pressure_df$Time) 
+Presres<-diff(Time2)
+
+
+# #statistic metric
+# #create  an index fore each 5 minutes bout every hour. 
+Presres3<-c(Presres,0)
+Pressure_df3<- cbind(Presres3,Pressure_df, Time3)
+
+
+bout_st<-c(0,which(Pressure_df3$Presres3>50))
+diff(bout_st)
+sum(diff(bout_st))
+lastp<-length(Pressure_df3$Presres3)-sum(diff(bout_st))
+idx<-c(diff(bout_st),lastp)
+Pressure_df3$group=(rep(1:length(idx),times=idx))
+>>>>>>> 8ae99f8593aca5e3e89dd3f4f21eb0f061520a11
 tabla<-Pressure_df3%>%group_by(group)%>%summarise(median_BaromP=median(Pressure_hPa,na.rm = T),
                                            mean_BaromP=mean(Pressure_hPa,na.rm = T),
                                            min_BaromP=min(Pressure_hPa,na.rm = T),
                                            max_BaromP=max(Pressure_hPa,na.rm = T),
+<<<<<<< HEAD
                                            first_Qu_BaromP=quantile(Pressure_hPa,probs = 0.25,na.rm = T),
                                            third_Qu_BaromP=quantile(Pressure_hPa,probs = 0.75,na.rm = T),
                                            count=n(),
@@ -100,11 +128,16 @@ tabla<-Pressure_df3%>%group_by(group)%>%summarise(median_BaromP=median(Pressure_
                                            )
 #Calculate the inter bout interval.
 tabla$IBI<- c(0,diff(tabla$first_value))# it should be approx one per hour
+=======
+first_Qu_BaromP=quantile(Pressure_hPa,probs = 0.25,na.rm = T),
+                                           third_Qu_BaromP=quantile(Pressure_hPa,probs = 0.75,na.rm = T))
+>>>>>>> 8ae99f8593aca5e3e89dd3f4f21eb0f061520a11
 
 tabla_global<-Pressure_df3%>%summarise(median_BaromP=median(Pressure_hPa,na.rm = T),
                                            mean_BaromP=mean(Pressure_hPa,na.rm = T),
                                            min_BaromP=min(Pressure_hPa,na.rm = T),
                                            max_BaromP=max(Pressure_hPa,na.rm = T),
+<<<<<<< HEAD
                                            first_Qu_BaromP=quantile(Pressure_hPa,probs = 0.25,na.rm = T),
                                            third_Qu_BaromP=quantile(Pressure_hPa,probs = 0.75,na.rm = T)
 )
@@ -154,6 +187,22 @@ greenish dash lines link medians
 # Color-blind friendly palette from http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#a-colorblind-friendly-palette
 # The palette with black:
 cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+=======
+first_Qu_BaromP=quantile(Pressure_hPa,probs = 0.25,na.rm = T),
+                                           third_Qu_BaromP=quantile(Pressure_hPa,probs = 0.75,na.rm = T))
+
+
+```
+
+### Let's make a graph
+
+```{r Pressure graph , echo=FALSE, include = TRUE, out.width = '200%'}
+
+# Color-blind friendly palette from http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#a-colorblind-friendly-palette
+# The palette with black:
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+>>>>>>> 8ae99f8593aca5e3e89dd3f4f21eb0f061520a11
 ggplot(data = tabla, aes(x = group)) +
   geom_point(aes(y = mean_BaromP), cex = 0.5)  + # black points as means
   geom_errorbar(aes(ymin = min_BaromP, ymax = max_BaromP), color =  cbbPalette[3]) + # blueish bars for min and max
@@ -162,6 +211,7 @@ ggplot(data = tabla, aes(x = group)) +
   labs(y = "stats", x = "time intervals") +
   scale_y_continuous(limits=c(floor(min(tabla$min_BaromP)),ceiling(max(tabla$max_BaromP)))) +
   theme_bw()
+<<<<<<< HEAD
 ```
 
 ### Now without max and min
@@ -174,6 +224,18 @@ greenish dash lines link medians
 # Color-blind friendly palette from http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#a-colorblind-friendly-palette
 # The palette with black:
 cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+=======
+
+```
+### Now without max and min
+
+```{r Pressure graph 2 , echo=FALSE, include = TRUE, out.width = '200%'}
+
+# Color-blind friendly palette from http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#a-colorblind-friendly-palette
+# The palette with black:
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+>>>>>>> 8ae99f8593aca5e3e89dd3f4f21eb0f061520a11
 ggplot(data = tabla, aes(x = group)) +
   geom_errorbar(aes(ymin = first_Qu_BaromP, ymax = third_Qu_BaromP), color =  cbbPalette[4]) + # greenish bars for q1 and q3
   geom_line(aes(y = median_BaromP), color = cbbPalette[4], linetype = 3) + # greenish dash lines linking medians
@@ -185,6 +247,7 @@ ggplot(data = tabla, aes(x = group)) +
 
 ```
 
+<<<<<<< HEAD
 ### Data to check
 Here is plotted how data should look like in first plot
 
@@ -236,6 +299,53 @@ pPresTS2 <- data2plot_good %>%
 
 
 
+=======
+
+
+### Some context for each track's pressure data 
+
+* Source: Ollie's notebooks and email exchanges between Jelle, Ollie and me
+
+* The data are not calibrated yet.
+* Since there should be more or less 5-min segments of data every hour, the raw data at 10 Hz are first divided into 5 minute segments (or 15, but it will only contain 5)
+* Data cleaning is done on these segments. So, each segments:
+  * Assuming that barometric pressure distributes normally --Jelle said it's a safe assumption --, outliers are filtered out by first obtaining z-scores (gives you an idea of how far from the mean a data point is. But more technically it's a measure of how many standard deviations below or above the population mean a raw score is)
+  and keeping the observations whose absolute z-scores are below 3. 
+  * Then, if consecutive observations show a difference greater than 2hPa (meaning a ~20m difference),
+  the following value is replaced by the preceding value. 
+* Resampling is done at 1 Hz. It is basically done by fitting sinusoids to the data (Fast Fourier Transform) and then taking value points. We're using the obspy.resample function in python which is a wrapper of scipy.signal.resample
+* Everything is saved into a netCDF file
+
+
+
+## Time series
+```{r Pressure2 , echo=FALSE, include = T}
+paste("number of observations is", nrow(Pressure_df))
+paste("summary diff time Pressure sensor", summary(Presres))
+paste("Min, 1st Qu, Median, Mean, 3rdQu, Max")
+as.data.frame(tabla)
+as.data.frame(tabla_global)
+
+
+```
+# ```{r PressureTS2 , echo=FALSE}
+## I was trying to do the plots here... but I have been stuck
+# ydex=which(Pressure_df3$group<19)
+# pmedian_BaromP <- ggplot() + geom_point(data=Pressure_df3[ydex,], aes(x=Time3, y= Pressure_hPa))
+#   geom_hline(aes(yintercept=median_BaromP,color='red'))
+# pmedian_BaromP
+# ```
+```{r PressureTS , echo=FALSE}
+###create an interactive figure of lat long using ggplotly with the colony point
+# data <- Pressure_df[30000:40000,]
+# pPresTS <- data %>%
+#   ggplot(aes(x =Time, y = Pressure_hPa)) +
+#   geom_point(aes(color = Pressure_hPa),size=0.5)+
+#   scale_colour_viridis_c(option = "magma", direction = -1) +
+#   theme_minimal()
+# ggplotly(pPresTS,
+#          dynamicTicks = TRUE, session="knitr")
+>>>>>>> 8ae99f8593aca5e3e89dd3f4f21eb0f061520a11
 plot(Pressure_df$Time, Pressure_df$Pressure_hPa)
 
 ```
@@ -265,6 +375,12 @@ plot(Pressure_df$Time, Pressure_df$Pressure_hPa)
 # open Infrasound file
 
 
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> 8ae99f8593aca5e3e89dd3f4f21eb0f061520a11
 path_to_ncdf_sound <- paste0(path_to_ncdf, "Infrasd/")
 sound_name <- dir(path_to_ncdf_sound, pattern = "SPL")
 nc_file <- nc_open(paste0(path_to_ncdf_sound, sound_name))
@@ -274,6 +390,7 @@ print(nc_file) # getting all the characteristics of the file
 names_var <- names(nc_file$var)
 names_var <- names_var[1:(length(names_var)-1)]
 SPL_Matrix <- ncvar_get(nc_file, "SPLdata")
+<<<<<<< HEAD
 Freq<-ncvar_get(nc_file,"Frequencies")
 
 
@@ -285,10 +402,21 @@ str(SPL_df)
 #Freq <- SPL_df[1,2:dim(SPL_df)[2]] # These are the frequencies for SPL - for ID111_2_IS_DT5 SPL_df[13,2:dim(SPL_df)[2]]
 SPL_df <- SPL_df[-1,]#  remove first row
 SPL_df$Time_o<-SPL_df$Time
+=======
+nc_close(nc_file)
+SPL_df <- as.data.frame(SPL_Matrix)
+colnames(SPL_df) <- c("Time")
+str(SPL_df)
+Freq <- SPL_df[1,2:dim(SPL_df)[2]] # These are the frequencies for SPL - for ID111_2_IS_DT5 SPL_df[13,2:dim(SPL_df)[2]]
+SPL_df <- SPL_df[-1,]#  remove first row
+Time2<-SPL_df$Time
+Soundres<-diff(Time2)
+>>>>>>> 8ae99f8593aca5e3e89dd3f4f21eb0f061520a11
 SPL_df$Time <- as.POSIXct(SPL_df$Time, tz="GMT", origin = "1970-01-01 00:00:00") + hours(5)
 # We may not be interested in each frequency for now
 #
 
+<<<<<<< HEAD
 # We'll make two categories of SPL: 0.07-1 and 1-4
 SPL_low <- apply(SPL_df[,which(Freq < 1 & Freq > 0.07)+1],1,mean)# what does the -inf mean?
 SPL_high <- apply(SPL_df[,which(Freq > 1)+1],1,mean)
@@ -305,11 +433,22 @@ tabla_global_SPL$mean_IBI<-mean(diff(SPL_df$Time_o))
 
 
 
+=======
+# We'll make two categories of SPL: 0.07-1 and 1-5
+SPL_low <- apply(as.data.frame(SPL_df[,which(Freq < 1 & Freq > 0.07)+1]),1,mean)# what does the -inf mean?
+SPL_high <- apply(SPL_df[,which(Freq > 1)+1],1,mean)
+SPL_cat <- data.frame(Time=SPL_df[,1], SPL_low=SPL_low, SPL_high=SPL_high)
+>>>>>>> 8ae99f8593aca5e3e89dd3f4f21eb0f061520a11
 ```
 
 ### Time series of Sound Pressure Level from Low Infrasound (0.07-1Hz)
 ```{r SPLlowTS2 , echo=FALSE, include = T}
+<<<<<<< HEAD
 as.data.frame(tabla_global_SPL)
+=======
+paste("number of observations is", nrow(SPL_df))
+paste("summary diff time Pressure sensor", summary(Soundres))
+>>>>>>> 8ae99f8593aca5e3e89dd3f4f21eb0f061520a11
 ```
 
 ```{r SPLlowTS , echo=FALSE}
